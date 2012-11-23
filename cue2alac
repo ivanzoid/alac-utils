@@ -86,6 +86,16 @@ main()
 
 	mkdir -p tmp
 
+	if program_exists iconv; then
+		local encoding=`file --mime "$cue_file" | sed 's/^[^:]*: .*set=\(.*\)/\1/'`
+		echo "encoding: $encoding"
+		echo "Auto-converting $cue_file to UTF-8 ..."
+		iconv -f "$encoding" -t UTF-8 "$cue_file" > "tmp/$cue_file"
+		cue_file="$cue_file"
+	else
+		cue_file="../$cue_file"
+	fi
+
 	ext=`echo "${music_file: -4}" | tr "[:upper:]" "[:lower:]"`
 	if [ "$ext" == ".ape" ]; then
 		local music_file_tmp="${music_file/%ape/flac}"
@@ -98,7 +108,7 @@ main()
 
 	cd tmp
 
-	shnsplit -f "../$cue_file" -o flac -t '%n %t' "$music_file"
+	shnsplit -f "$cue_file" -o flac -t '%n %t' "$music_file"
 
 	if [ -n "$music_file_tmp" ]; then
 		echo "Removing temporary file $music_file_tmp ..."
@@ -108,7 +118,7 @@ main()
 	local trackno=1
 
 	for file in *.flac; do
-		convert "../$cue_file" $trackno "$file" "$date" "$genre"
+		convert "$cue_file" $trackno "$file" "$date" "$genre"
 		trackno=$(($trackno + 1))
 	done
 
