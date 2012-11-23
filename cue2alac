@@ -67,6 +67,11 @@ main()
 		exit 1
 	fi
 
+	if ! program_exists cueprint; then
+		echo "Please install cuetools"
+		exit 1
+	fi
+
 	if [ -z "$1" ]; then
 		usage
 		exit
