@@ -88,7 +88,6 @@ main()
 
 	if program_exists iconv; then
 		local encoding=`file --mime "$cue_file" | sed 's/^[^:]*: .*set=\(.*\)/\1/'`
-		echo "encoding: $encoding"
 		echo "Auto-converting $cue_file to UTF-8 ..."
 		iconv -f "$encoding" -t UTF-8 "$cue_file" > "tmp/$cue_file"
 		cue_file="$cue_file"
