@@ -4,19 +4,19 @@
 
 Converts ape+cue, wv+cue, flac+cue to separate m4a (ALAC) tracks.
 
-#### Installation
-You will need the following packages: `ffmpeg flac shntool cuetools`
+#### Dependencies:
+Install the following packages: `ffmpeg flac shntool cuetools`
 
-#### Usage
-
+#### Usage:
 `cue2alac <cuefile>`
+Will convert cuesheet+file to .m4a tracks in current directory.
 
 ## flac2alac
 
 Converts flac track to alac track.
 
-#### Installation
-You will need the following packages: `ffmpeg flac`
+#### Dependencies:
+Install the following packages: `ffmpeg flac`
 
 #### Usage
 
