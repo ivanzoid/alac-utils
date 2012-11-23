@@ -9,7 +9,7 @@ Install the following packages: `ffmpeg flac shntool cuetools`
 
 #### Usage:
 `cue2alac <cuefile>`
-Will convert cuesheet+file to .m4a tracks in current directory.
+
 
 ## flac2alac
 
