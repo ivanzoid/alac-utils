@@ -32,10 +32,12 @@ convert()
 	local infile="$3"
 	local date="$4"
 	local genre="$5"
-	local outfile="${infile/%flac/m4a}"
 
+	local title="$(metadata "$cue_file" "%t")"
 	local album_artist="$(metadata "$cue_file" "%P")"
 	local artist="$(metadata "$cue_file" "%p")"
+
+	local outfile=`echo "$track - $title.m4a" | sed 's#\/#-#g'`
 
 	if [ -z "$artist" ] && [ -n "$album_artist" ]; then
 		artist="$album_artist"
@@ -45,7 +47,7 @@ convert()
 	echo "Converting $infile to $outfile ..."
 
 	ffmpeg -v error -i "$infile" -acodec alac \
-		-metadata title="$(metadata "$cue_file" "%t")" \
+		-metadata title="$title" \
 		-metadata artist="$artist" \
 		-metadata album_artist="$album_artist" \
 		-metadata album="$(metadata "$cue_file" "%T")" \
@@ -135,21 +137,22 @@ main()
 	# Perform splitting to separate FLAC files
 	#
 
-	shnsplit -f "$cue_file" -o flac -t '%n %t' "$music_file"
+	shnsplit -f "$cue_file" -o flac -t '%n' "$music_file"
 
 	if [ -n "$music_file_tmp" ]; then
 		echo "Removing temporary file $music_file_tmp ..."
 		rm -rf "$music_file_tmp"
 	fi
 
+	rm -f 00.flac
+
 	#
 	# Convert each FLAC file to ALAC + tag them
 	#
 
-	local track=1
 	for file in *.flac; do
+		local track="${file/.flac/}"
 		convert "$cue_file" $track "$file" "$date" "$genre"
-		track=$(($track + 1))
 	done
 
 	#
