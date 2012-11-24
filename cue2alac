@@ -1,5 +1,13 @@
 #!/bin/bash
 
+#
+# Cuesheet encoding auto-fix settings.
+#
+# cue2alac will try to automatically fix possible wrong (non UTF-8) encoding with 'enca' program (if it is installed).
+# Please set your language preference for enca here.
+#
+ENCA_LANGUAGE='ru'
+
 usage()
 {
 	echo "usage: cue2alac <cuefile>"
@@ -77,6 +85,10 @@ main()
 		exit
 	fi
 
+	#
+	# Get some metadata from cuefile
+	#
+
 	local cue_file="$1"
 	local music_file=`sed -n 's#^FILE "\(.*\)".*$#\1#p' "$cue_file"`
 	local date=`sed -n -e 's#^REM DATE \(.*\)$#\1#p' "$cue_file"`
@@ -86,14 +98,26 @@ main()
 
 	mkdir -p tmp
 
-	if program_exists iconv; then
+	#
+	# Try to automatically fix possible non-UTF-8 encoding in cuefile
+	#
+
+	if program_exists enca && [ -n "$ENCA_LANGUAGE" ] ; then
+		echo "Trying to auto-convert $cue_file to UTF-8 ..."
+		enca -L "$ENCA_LANGUAGE" -x UTF-8 "$cue_file" > "tmp/$cue_file"
+		cue_file="$cue_file"
+	elif program_exists iconv; then
 		local encoding=`file --mime "$cue_file" | sed 's/^[^:]*: .*set=\(.*\)/\1/'`
-		echo "Auto-converting $cue_file to UTF-8 ..."
+		echo "Trying to auto-convert $cue_file to UTF-8 ..."
 		iconv -f "$encoding" -t UTF-8 "$cue_file" > "tmp/$cue_file"
 		cue_file="$cue_file"
 	else
 		cue_file="../$cue_file"
 	fi
+
+	#
+	# If source music file is APE, convert first it to FLAC, because shnsplit can't split APE
+	#
 
 	ext=`echo "${music_file: -4}" | tr "[:upper:]" "[:lower:]"`
 	if [ "$ext" == ".ape" ]; then
@@ -107,6 +131,10 @@ main()
 
 	cd tmp
 
+	#
+	# Perform splitting to separate FLAC files
+	#
+
 	shnsplit -f "$cue_file" -o flac -t '%n %t' "$music_file"
 
 	if [ -n "$music_file_tmp" ]; then
@@ -114,12 +142,19 @@ main()
 		rm -rf "$music_file_tmp"
 	fi
 
-	local trackno=1
+	#
+	# Convert each FLAC file to ALAC + tag them
+	#
 
+	local track=1
 	for file in *.flac; do
-		convert "$cue_file" $trackno "$file" "$date" "$genre"
-		trackno=$(($trackno + 1))
+		convert "$cue_file" $track "$file" "$date" "$genre"
+		track=$(($track + 1))
 	done
+
+	#
+	# Delete temp stuff
+	#
 
 	echo "Removing temporary files ..."
 	mv *.m4a ..
