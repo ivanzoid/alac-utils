@@ -118,15 +118,10 @@ main()
 	#
 
 	local music_file=`sed -n 's#^FILE "\(.*\)".*$#\1#p' "$cue_file"`
-	echo "music_file: $music_file"
 	local date=`sed -n -e 's#^REM DATE \(.*\)$#\1#p' "$cue_file"`
-	echo "date: $date"
 	date=`echo "$date" | sed 's#\"##g'`
-	echo "date: $date"
 	local genre=`sed -n -e 's#^REM GENRE \(.*\)#\1#p' "$cue_file"`
-	echo "genre: $genre"
 	genre=`echo $genre | sed 's#\"##g'`
-	echo "genre: $genre"
 
 	#
 	# If source music file is APE, convert first it to FLAC, because shnsplit can't split APE
