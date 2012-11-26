@@ -30,14 +30,16 @@ convert()
 	local cue_file="$1"
 	local track=$2
 	local infile="$3"
-	local date="$4"
-	local genre="$5"
+	local dir="$4"
+	local date="$5"
+	local genre="$6"
 
 	local title="$(metadata "$cue_file" "%t")"
 	local album_artist="$(metadata "$cue_file" "%P")"
 	local artist="$(metadata "$cue_file" "%p")"
 
 	local outfile=`echo "$track - $title.m4a" | sed 's#\/#-#g'`
+	outfile="$dir/$outfile"
 
 	if [ -z "$artist" ] && [ -n "$album_artist" ]; then
 		artist="$album_artist"
@@ -87,16 +89,7 @@ main()
 		exit
 	fi
 
-	#
-	# Get some metadata from cuefile
-	#
-
 	local cue_file="$1"
-	local music_file=`sed -n 's#^FILE "\(.*\)".*$#\1#p' "$cue_file"`
-	local date=`sed -n -e 's#^REM DATE \(.*\)$#\1#p' "$cue_file"`
-	date=`echo "$date" | sed 's#\"##g'`
-	local genre=`sed -n -e 's#^REM GENRE \(.*\)#\1#p' "$cue_file"`
-	genre=`echo $genre | sed 's#\"##g'`
 
 	mkdir -p tmp
 
@@ -107,15 +100,33 @@ main()
 	if program_exists enca && [ -n "$ENCA_LANGUAGE" ] ; then
 		echo "Trying to auto-convert $cue_file to UTF-8 ..."
 		enca -L "$ENCA_LANGUAGE" -x UTF-8 < "$cue_file" > "tmp/$cue_file"
-		cue_file="$cue_file"
 	elif program_exists iconv; then
 		local encoding=`file --mime "$cue_file" | sed 's/^[^:]*: .*set=\(.*\)/\1/'`
 		echo "Trying to auto-convert $cue_file to UTF-8 ..."
 		iconv -f "$encoding" -t UTF-8 "$cue_file" > "tmp/$cue_file"
-		cue_file="$cue_file"
 	else
-		cue_file="../$cue_file"
+		cp "$cue_file" "tmp/$cue_file"
 	fi
+
+	cue_file="tmp/$cue_file"
+	if program_exists dos2unix; then
+		dos2unix "tmp/$cue_file"
+	fi
+
+	#
+	# Get some metadata from cuefile
+	#
+
+	local music_file=`sed -n 's#^FILE "\(.*\)".*$#\1#p' "$cue_file"`
+	echo "music_file: $music_file"
+	local date=`sed -n -e 's#^REM DATE \(.*\)$#\1#p' "$cue_file"`
+	echo "date: $date"
+	date=`echo "$date" | sed 's#\"##g'`
+	echo "date: $date"
+	local genre=`sed -n -e 's#^REM GENRE \(.*\)#\1#p' "$cue_file"`
+	echo "genre: $genre"
+	genre=`echo $genre | sed 's#\"##g'`
+	echo "genre: $genre"
 
 	#
 	# If source music file is APE, convert first it to FLAC, because shnsplit can't split APE
@@ -126,42 +137,40 @@ main()
 		local music_file_tmp="${music_file/%ape/flac}"
 		echo "Converting $music_file to $music_file_tmp ..."
 		ffmpeg -v warning -i "$music_file" "tmp/$music_file_tmp"
-		music_file="$music_file_tmp"
-	else
-		music_file="../$music_file"
+		music_file="tmp/$music_file_tmp"
 	fi
-
-	cd tmp
 
 	#
 	# Perform splitting to separate FLAC files
 	#
 
-	shnsplit -f "$cue_file" -o flac -t '%n' "$music_file"
+	shnsplit -d tmp -f "$cue_file" -o flac -t '%n' "$music_file"
 
 	if [ -n "$music_file_tmp" ]; then
 		echo "Removing temporary file $music_file_tmp ..."
 		rm -rf "$music_file_tmp"
 	fi
 
-	rm -f 00.flac
+	rm -f tmp/00.flac
 
 	#
 	# Convert each FLAC file to ALAC + tag them
 	#
 
-	for file in *.flac; do
+	for file in tmp/*.flac; do
 		local track="${file/.flac/}"
-		convert "$cue_file" $track "$file" "$date" "$genre"
+		track="${track/tmp\//}"
+		convert "$cue_file" $track "$file" "tmp" "$date" "$genre"
 	done
+
+	echo "Moving files ..."
+	mv tmp/*.m4a .
 
 	#
 	# Delete temp stuff
 	#
 
 	echo "Removing temporary files ..."
-	mv *.m4a ..
-	cd ..
 	rm -rf tmp
 
 	echo "Done!"
