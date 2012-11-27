@@ -1,5 +1,7 @@
 # ALAC (Apple Lossless Audio Codec) command-line utils
 
+Инструкции на русском языке можно найти [здесь](http://zoid.cc/alac-utils)
+
 ## cue2alac
 
 Converts ape+cue, wv+cue, flac+cue to separate ALAC (.m4a) files.
